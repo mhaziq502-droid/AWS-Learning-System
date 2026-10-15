@@ -1,0 +1,72 @@
+name: Build & Release Windows EXE
+
+# Builds the Windows .exe installer on a Windows runner and publishes it as a
+# downloadable GitHub Release asset.
+#
+# Triggers:
+#   - push to main            -> builds and (re)publishes a "latest" prerelease
+#                                you can always download the newest .exe from
+#   - push a tag like v1.0.0  -> builds and publishes a versioned Release
+#   - manual (workflow_dispatch)
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # required to create releases / upload assets
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer + electron
+        run: npm run build
+
+      - name: Package Windows installer
+        run: npx electron-builder --win --publish never
+
+      # Always upload as a workflow artifact (downloadable from the Actions run).
+      - name: Upload installer as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AWS-Learning-System-Windows-Setup
+          path: release/*.exe
+          if-no-files-found: error
+
+      # On pushes to main: keep a rolling "latest" prerelease you can always
+      # grab the newest .exe from without cutting a version tag.
+      - name: Publish rolling "latest" release (main)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build (main)
+          prerelease: true
+          files: release/*.exe
+          body: |
+            Automatically built from the latest `main`.
+            Download the `.exe` under **Assets** below and run it to install.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # On version tags: publish a proper versioned release.
+      - name: Publish versioned release (tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
