@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { MODULES, getModule } from '../data/modules.js';
-import { getNotes } from '../data/notes.js';
+import { getNotes } from '../data/notes/index.js';
 import { fetchUrl, openExternal } from '../lib/storage.js';
 import { parseFeed } from '../lib/feed.js';
 import ModulePicker from '../components/ModulePicker.jsx';
+import NoteBlocks from '../components/NoteBlocks.jsx';
 
 export default function Notes({ app, activeModule, setActiveModule }) {
   const moduleId = activeModule || MODULES[0].id;
@@ -12,6 +13,7 @@ export default function Notes({ app, activeModule, setActiveModule }) {
   const progress = app.store.progress[moduleId]?.notes || {};
 
   const [feed, setFeed] = useState({ status: 'idle', items: [] });
+  const [openSections, setOpenSections] = useState({}); // id -> bool
 
   // Live-fetch the AWS "What's New" feed when the module changes.
   useEffect(() => {
@@ -34,10 +36,27 @@ export default function Notes({ app, activeModule, setActiveModule }) {
     };
   }, [moduleId]);
 
-  const toggle = (sectionId) => {
+  // Collapse all sections when switching modules.
+  useEffect(() => {
+    setOpenSections({});
+  }, [moduleId]);
+
+  const toggleDone = (sectionId) => {
     const done = !!progress[sectionId];
     app.markNoteComplete(moduleId, sectionId, !done);
   };
+
+  const toggleOpen = (sectionId) =>
+    setOpenSections((o) => ({ ...o, [sectionId]: !o[sectionId] }));
+
+  const allOpen = notes.length > 0 && notes.every((n) => openSections[n.id]);
+  const setAll = (open) => {
+    const next = {};
+    notes.forEach((n) => (next[n.id] = open));
+    setOpenSections(next);
+  };
+
+  const doneCount = notes.filter((n) => progress[n.id]).length;
 
   return (
     <div className="view">
@@ -45,16 +64,12 @@ export default function Notes({ app, activeModule, setActiveModule }) {
         <div>
           <h1>Study Notes</h1>
           <p className="subtitle">
-            Core concepts (offline) plus live AWS updates fetched from the internet.
+            Detailed, illustrated concepts (offline) plus live AWS updates fetched from the internet.
           </p>
         </div>
       </header>
 
-      <ModulePicker
-        modules={MODULES}
-        activeId={moduleId}
-        onPick={setActiveModule}
-      />
+      <ModulePicker modules={MODULES} activeId={moduleId} onPick={setActiveModule} />
 
       <section className="module-banner" style={{ '--accent': module.color }}>
         <div>
@@ -68,28 +83,35 @@ export default function Notes({ app, activeModule, setActiveModule }) {
       </section>
 
       <section>
-        <h3 className="section-title">Core concepts</h3>
+        <div className="notes-toolbar">
+          <h3 className="section-title">
+            Core concepts
+            <span className="live-badge">
+              {doneCount}/{notes.length} done
+            </span>
+          </h3>
+          <button className="btn btn-ghost sm" onClick={() => setAll(!allOpen)}>
+            {allOpen ? 'Collapse all' : 'Expand all'}
+          </button>
+        </div>
+
         <div className="notes-list">
           {notes.map((n) => {
             const done = !!progress[n.id];
+            const isOpen = !!openSections[n.id];
             return (
               <article key={n.id} className={`note-card ${done ? 'done' : ''}`}>
                 <div className="note-head">
-                  <h4>{n.title}</h4>
-                  <label className="note-check">
-                    <input
-                      type="checkbox"
-                      checked={done}
-                      onChange={() => toggle(n.id)}
-                    />
+                  <button className="note-toggle" onClick={() => toggleOpen(n.id)}>
+                    <span className="qa-chevron">{isOpen ? '▾' : '▸'}</span>
+                    <h4>{n.title}</h4>
+                  </button>
+                  <label className="note-check" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={done} onChange={() => toggleDone(n.id)} />
                     <span>{done ? 'Completed' : 'Mark done'}</span>
                   </label>
                 </div>
-                <ul className="note-body">
-                  {n.body.map((line, i) => (
-                    <li key={i}>{line}</li>
-                  ))}
-                </ul>
+                {isOpen && <NoteBlocks blocks={n.blocks} />}
               </article>
             );
           })}

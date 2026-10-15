@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadStore, saveStore } from './storage.js';
 import { MODULES } from '../data/modules.js';
-import { getNotes } from '../data/notes.js';
+import { getNotes } from '../data/notes/index.js';
 import { getQuiz } from '../data/quizzes.js';
 
 // Central app state: progress + quiz history, persisted via the storage layer.
@@ -74,23 +74,51 @@ export function useAppState() {
     });
   }, []);
 
+  const recordExam = useCallback((moduleId, result) => {
+    // result: { score, total, pct, passed, passPct, domains, durationSec }
+    setStore((prev) => {
+      const next = structuredClone(prev);
+      next.progress[moduleId] = next.progress[moduleId] || {
+        notes: {},
+        quizzesTaken: 0,
+        bestScore: 0,
+      };
+      next.progress[moduleId].examsTaken =
+        (next.progress[moduleId].examsTaken || 0) + 1;
+      next.progress[moduleId].bestExamPct = Math.max(
+        next.progress[moduleId].bestExamPct || 0,
+        result.pct
+      );
+      next.examHistory = next.examHistory || [];
+      next.examHistory.unshift({
+        moduleId,
+        ...result,
+        date: new Date().toISOString(),
+      });
+      next.examHistory = next.examHistory.slice(0, 100);
+      return next;
+    });
+  }, []);
+
   const resetModule = useCallback((moduleId) => {
     setStore((prev) => {
       const next = structuredClone(prev);
       delete next.progress[moduleId];
       next.quizHistory = next.quizHistory.filter((h) => h.moduleId !== moduleId);
+      next.examHistory = (next.examHistory || []).filter((h) => h.moduleId !== moduleId);
       return next;
     });
   }, []);
 
   const resetAll = useCallback(() => {
-    setStore({ progress: {}, quizHistory: [], notesCache: {}, settings: {} });
+    setStore({ progress: {}, quizHistory: [], examHistory: [], notesCache: {}, settings: {} });
   }, []);
 
   return {
     store,
     markNoteComplete,
     recordQuiz,
+    recordExam,
     resetModule,
     resetAll,
   };

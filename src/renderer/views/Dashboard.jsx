@@ -75,6 +75,7 @@ export default function Dashboard({ app, goToModule, setView }) {
               store={app.store}
               onOpenNotes={(id) => goToModule(id, 'notes')}
               onOpenQuiz={(id) => goToModule(id, 'quiz')}
+              onOpenExam={(id) => goToModule(id, 'exam')}
             />
           ))}
         </div>

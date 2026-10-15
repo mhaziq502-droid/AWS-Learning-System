@@ -5,6 +5,7 @@ import { moduleStats, overallStats } from '../lib/useAppState.js';
 export default function Progress({ app, goToModule }) {
   const overall = overallStats(app.store);
   const history = app.store.quizHistory;
+  const examHistory = app.store.examHistory || [];
 
   return (
     <div className="view">
@@ -64,6 +65,9 @@ export default function Progress({ app, goToModule }) {
                   <button className="btn btn-ghost sm" onClick={() => goToModule(m.id, 'quiz')}>
                     Quiz
                   </button>
+                  <button className="btn btn-ghost sm" onClick={() => goToModule(m.id, 'exam')}>
+                    Exam
+                  </button>
                   <button
                     className="btn btn-danger-ghost sm"
                     onClick={() => {
@@ -105,6 +109,47 @@ export default function Progress({ app, goToModule }) {
                     </td>
                     <td>
                       <span className={`pill ${h.pct >= 70 ? 'pass' : 'fail'}`}>{h.pct}%</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section>
+        <h2 className="section-title">Mock exam history</h2>
+        {examHistory.length === 0 ? (
+          <div className="feed-placeholder">
+            No mock exams taken yet. Try a full-length timed exam from the Mock Exam tab!
+          </div>
+        ) : (
+          <table className="history-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Module</th>
+                <th>Score</th>
+                <th>%</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {examHistory.map((h, i) => {
+                const mod = MODULES.find((m) => m.id === h.moduleId);
+                return (
+                  <tr key={i}>
+                    <td>{new Date(h.date).toLocaleString()}</td>
+                    <td>{mod?.code || h.moduleId}</td>
+                    <td>
+                      {h.score}/{h.total}
+                    </td>
+                    <td>{h.pct}%</td>
+                    <td>
+                      <span className={`pill ${h.passed ? 'pass' : 'fail'}`}>
+                        {h.passed ? 'PASS' : 'FAIL'}
+                      </span>
                     </td>
                   </tr>
                 );

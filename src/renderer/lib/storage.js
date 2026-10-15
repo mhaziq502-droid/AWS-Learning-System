@@ -3,7 +3,7 @@
 // Electron) it falls back to localStorage so the UI still works.
 
 const BROWSER_KEY = 'aws-learning-store';
-const EMPTY = { progress: {}, quizHistory: [], notesCache: {}, settings: {} };
+const EMPTY = { progress: {}, quizHistory: [], examHistory: [], notesCache: {}, settings: {} };
 
 function hasBridge() {
   return typeof window !== 'undefined' && !!window.awsLearning;

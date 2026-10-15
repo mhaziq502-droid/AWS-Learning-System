@@ -32,12 +32,35 @@ Each module also **fetches the latest AWS announcements live from the internet**
 (AWS "What's New" feed) when the app runs on your machine, with a graceful
 offline fallback. A link to the official AWS exam guide opens in your browser.
 
+Each topic is a rich, illustrated study section containing **detailed original
+explanations, Mermaid architecture diagrams, comparison tables, and
+exam-tip / gotcha callouts** — not just bullet summaries. Sections are
+collapsible and each can be marked complete for progress tracking.
+
+> All notes and diagrams are **original content written for this project**. The
+> excellent community study guides out there were an inspiration for topic
+> coverage only — nothing is copied.
+
 ### 📝 Quizzes — randomized, per certification
 - A dedicated question bank per certification module.
 - **Every attempt randomizes the order of questions _and_ the order of answer
   options** (the correct-answer index is remapped so scoring stays correct).
 - Immediate feedback with an explanation after each question.
 - Best score per module is tracked.
+
+### 🎯 Mock Exam — full-length & timed, per certification
+- A **timed, full-length practice exam** per certification in the real exam
+  **format**: scenario questions, single- **and** multiple-response items,
+  a countdown timer, a question palette, flag-for-review, and auto-submit when
+  time expires.
+- Scored against the **real pass mark** (e.g. 72% for SAA) with a
+  **per-domain breakdown** so you see where to focus.
+- Questions and options are **randomized every attempt**.
+- **Important — these are original, exam-realistic questions authored for this
+  project. They are NOT real or "leaked" AWS exam questions.** Using actual
+  exam content / "braindumps" violates the AWS Certification Program Agreement
+  and can get your certification revoked. The in-app "AWS official practice"
+  link points you to AWS's own legitimate practice material.
 
 ### 💬 Interview Q&A for Cloud Solution Architects
 The questions clients and interviewers most often ask a Cloud Solution
@@ -142,10 +165,12 @@ aws-learning-system/
 │     ├─ main.jsx
 │     ├─ App.jsx
 │     ├─ styles.css
-│     ├─ components/      # Sidebar, ModuleCard, ProgressRing, ModulePicker
-│     ├─ views/           # Dashboard, Notes, Quiz, Interview, Progress
+│     ├─ components/      # Sidebar, ModuleCard, ProgressRing, ModulePicker,
+│     │                   #   Diagram (Mermaid), NoteBlocks
+│     ├─ views/           # Dashboard, Notes, Quiz, MockExam, Interview, Progress
 │     ├─ lib/             # storage, feed parser, app-state hook
-│     └─ data/            # modules, notes, quizzes, interview content
+│     └─ data/            # modules, quizzes, interview, exams
+│        └─ notes/        # detailed per-module notes (clf, saa, sap, ...) + index
 ├─ scripts/build-electron.js
 ├─ vite.config.js
 └─ package.json
@@ -157,10 +182,18 @@ aws-learning-system/
 
 - **Add quiz questions:** edit `src/renderer/data/quizzes.js` — add objects with
   `q`, `options`, `answer` (correct index) and `explain`.
-- **Add notes:** edit `src/renderer/data/notes.js`.
+- **Add mock-exam questions:** edit `src/renderer/data/exams.js`. Each question
+  has `q`, `options`, `answer` (an **array** of correct indices — use multiple
+  for multiple-response), `domain` and `explain`. Tune length/time/pass-mark in
+  `EXAM_CONFIG`.
+- **Add / expand notes:** edit the per-module file in
+  `src/renderer/data/notes/` (see `notes/README.md` for the block format:
+  `p`, `h`, `list`, `steps`, `table`, `diagram`, `tip`, `warn`, `note`).
+  Diagrams are [Mermaid](https://mermaid.js.org/) definitions.
 - **Add interview Q&A:** edit `src/renderer/data/interview.js`.
-- **Add a module:** add an entry to `src/renderer/data/modules.js` (the UI,
-  progress tracking and quizzes wire up automatically).
+- **Add a module:** add an entry to `src/renderer/data/modules.js` and a notes
+  file + exam bank (the UI, progress tracking, quizzes and exams wire up
+  automatically).
 
 ---
 

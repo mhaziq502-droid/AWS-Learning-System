@@ -2,7 +2,7 @@ import React from 'react';
 import { moduleStats } from '../lib/useAppState.js';
 import ProgressRing from './ProgressRing.jsx';
 
-export default function ModuleCard({ module, store, onOpenNotes, onOpenQuiz }) {
+export default function ModuleCard({ module, store, onOpenNotes, onOpenQuiz, onOpenExam }) {
   const stats = moduleStats(module.id, store);
 
   return (
@@ -27,6 +27,11 @@ export default function ModuleCard({ module, store, onOpenNotes, onOpenQuiz }) {
         <button className="btn btn-ghost" onClick={() => onOpenQuiz(module.id)}>
           Quiz
         </button>
+        {onOpenExam && (
+          <button className="btn btn-ghost" onClick={() => onOpenExam(module.id)}>
+            Exam
+          </button>
+        )}
       </div>
     </div>
   );

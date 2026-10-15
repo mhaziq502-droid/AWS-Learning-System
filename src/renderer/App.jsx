@@ -4,12 +4,13 @@ import Sidebar from './components/Sidebar.jsx';
 import Dashboard from './views/Dashboard.jsx';
 import Notes from './views/Notes.jsx';
 import Quiz from './views/Quiz.jsx';
+import MockExam from './views/MockExam.jsx';
 import Interview from './views/Interview.jsx';
 import Progress from './views/Progress.jsx';
 
 export default function App() {
   const app = useAppState();
-  const [view, setView] = useState('dashboard'); // dashboard | notes | quiz | interview | progress
+  const [view, setView] = useState('dashboard'); // dashboard | notes | quiz | exam | interview | progress
   const [activeModule, setActiveModule] = useState(null);
 
   if (!app.store) {
@@ -42,6 +43,13 @@ export default function App() {
         )}
         {view === 'quiz' && (
           <Quiz
+            app={app}
+            activeModule={activeModule}
+            setActiveModule={setActiveModule}
+          />
+        )}
+        {view === 'exam' && (
+          <MockExam
             app={app}
             activeModule={activeModule}
             setActiveModule={setActiveModule}
