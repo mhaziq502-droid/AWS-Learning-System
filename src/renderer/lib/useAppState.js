@@ -110,8 +110,93 @@ export function useAppState() {
     });
   }, []);
 
+  // ---- Knowledge Base ------------------------------------------------------
+  const createFolder = useCallback((title, description) => {
+    const id = 'kb-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    setStore((prev) => {
+      const next = structuredClone(prev);
+      next.kbFolders = next.kbFolders || [];
+      next.kbFolders.unshift({
+        id,
+        title: title.trim() || 'Untitled folder',
+        description: (description || '').trim(),
+        files: [],
+        summary: null,
+        createdAt: new Date().toISOString(),
+      });
+      return next;
+    });
+    return id;
+  }, []);
+
+  const updateFolder = useCallback((folderId, patch) => {
+    setStore((prev) => {
+      const next = structuredClone(prev);
+      const f = (next.kbFolders || []).find((x) => x.id === folderId);
+      if (f) Object.assign(f, patch);
+      return next;
+    });
+  }, []);
+
+  const deleteFolder = useCallback((folderId) => {
+    if (typeof window !== 'undefined' && window.awsLearning?.kbDeleteFolder) {
+      window.awsLearning.kbDeleteFolder({ folderId });
+    }
+    setStore((prev) => {
+      const next = structuredClone(prev);
+      next.kbFolders = (next.kbFolders || []).filter((x) => x.id !== folderId);
+      return next;
+    });
+  }, []);
+
+  const addFileToFolder = useCallback((folderId, fileMeta) => {
+    // fileMeta: { id, name, ext, size, text, note }
+    setStore((prev) => {
+      const next = structuredClone(prev);
+      const f = (next.kbFolders || []).find((x) => x.id === folderId);
+      if (f) {
+        f.files = f.files || [];
+        f.files.push({ ...fileMeta, addedAt: new Date().toISOString() });
+        f.summary = null; // invalidate stale summary
+      }
+      return next;
+    });
+  }, []);
+
+  const removeFileFromFolder = useCallback((folderId, fileId) => {
+    setStore((prev) => {
+      const next = structuredClone(prev);
+      const f = (next.kbFolders || []).find((x) => x.id === folderId);
+      if (f) {
+        const file = (f.files || []).find((x) => x.id === fileId);
+        if (file && typeof window !== 'undefined' && window.awsLearning?.kbDeleteFile) {
+          window.awsLearning.kbDeleteFile({ folderId, fileId, ext: file.ext });
+        }
+        f.files = (f.files || []).filter((x) => x.id !== fileId);
+        f.summary = null;
+      }
+      return next;
+    });
+  }, []);
+
+  const saveFolderSummary = useCallback((folderId, summary) => {
+    setStore((prev) => {
+      const next = structuredClone(prev);
+      const f = (next.kbFolders || []).find((x) => x.id === folderId);
+      if (f) f.summary = { ...summary, generatedAt: new Date().toISOString() };
+      return next;
+    });
+  }, []);
+
   const resetAll = useCallback(() => {
-    setStore({ progress: {}, quizHistory: [], examHistory: [], notesCache: {}, settings: {} });
+    setStore({
+      progress: {},
+      quizHistory: [],
+      examHistory: [],
+      kbFolders: [],
+      notesCache: {},
+      settings: {},
+    });
   }, []);
 
   return {
@@ -121,6 +206,13 @@ export function useAppState() {
     recordExam,
     resetModule,
     resetAll,
+    // KB
+    createFolder,
+    updateFolder,
+    deleteFolder,
+    addFileToFolder,
+    removeFileFromFolder,
+    saveFolderSummary,
   };
 }
 

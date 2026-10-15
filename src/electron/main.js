@@ -85,6 +85,71 @@ ipcMain.handle('shell:open', (_event, url) => {
 });
 
 // -----------------------------------------------------------------------------
+// Knowledge Base file storage. Files live under <userData>/knowledge-base/
+// <folderId>/<fileId><ext> so they persist on the user's machine. Metadata and
+// extracted text are kept in the JSON store (handled by the renderer). The
+// renderer extracts text (PDF/DOCX client-side) and passes raw bytes as base64.
+// -----------------------------------------------------------------------------
+function kbRoot() {
+  return path.join(app.getPath('userData'), 'knowledge-base');
+}
+
+function safeSegment(id) {
+  // Only allow the ids we generate (hex/alphanumeric + dash) to avoid any path
+  // traversal from a crafted id.
+  return String(id).replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+function folderDir(folderId) {
+  return path.join(kbRoot(), safeSegment(folderId));
+}
+
+ipcMain.handle('kb:saveFile', (_event, { folderId, fileId, ext, base64 }) => {
+  try {
+    const dir = folderDir(folderId);
+    fs.mkdirSync(dir, { recursive: true });
+    const cleanExt = String(ext || '').replace(/[^a-zA-Z0-9.]/g, '');
+    const filePath = path.join(dir, safeSegment(fileId) + cleanExt);
+    fs.writeFileSync(filePath, Buffer.from(base64, 'base64'));
+    return { ok: true, path: filePath };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+});
+
+ipcMain.handle('kb:readFile', (_event, { folderId, fileId, ext }) => {
+  try {
+    const cleanExt = String(ext || '').replace(/[^a-zA-Z0-9.]/g, '');
+    const filePath = path.join(folderDir(folderId), safeSegment(fileId) + cleanExt);
+    const buf = fs.readFileSync(filePath);
+    return { ok: true, base64: buf.toString('base64') };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+});
+
+ipcMain.handle('kb:deleteFile', (_event, { folderId, fileId, ext }) => {
+  try {
+    const cleanExt = String(ext || '').replace(/[^a-zA-Z0-9.]/g, '');
+    const filePath = path.join(folderDir(folderId), safeSegment(fileId) + cleanExt);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+});
+
+ipcMain.handle('kb:deleteFolder', (_event, { folderId }) => {
+  try {
+    const dir = folderDir(folderId);
+    if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+});
+
+// -----------------------------------------------------------------------------
 // Window
 // -----------------------------------------------------------------------------
 function createWindow() {

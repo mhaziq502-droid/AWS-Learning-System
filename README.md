@@ -67,6 +67,26 @@ The questions clients and interviewers most often ask a Cloud Solution
 Architect — architecture, security, networking, cost, migration and behavioral —
 each with a concise **model answer**. Full-text searchable.
 
+### 📁 Knowledge Base — your document library
+A space for **information gathering and access**, separate from the study
+material:
+- Create **folders** with a **title and description**; the dashboard shows each
+  folder as a card with its file count.
+- **Search bar** that matches folder titles, descriptions, **file names, and the
+  extracted text content** of your files.
+- **Upload files into a folder** — PDF, Word (`.docx`), text, markdown, CSV and
+  other text formats. Files are stored **locally** on your machine (in the app's
+  user-data directory).
+- **"Summarize folder"** — a **built-in, fully offline** summarizer reads all of
+  the folder's files and produces a combined overview, key topics, and per-file
+  highlights. No internet, no API key, nothing leaves your machine. (It uses an
+  extractive technique — it surfaces the most important sentences — rather than
+  a cloud language model.)
+
+> Text extraction works on text-based PDFs and `.docx`; scanned/image-only PDFs
+> have no selectable text (OCR is not included). Files of any type are still
+> stored and searchable by name.
+
 ### 📊 Progress Tracker
 - Per-module completion = **50% topics studied + 50% best quiz score**.
 - Overall progress across all certifications.

@@ -7,4 +7,9 @@ contextBridge.exposeInMainWorld('awsLearning', {
   setStore: (data) => ipcRenderer.invoke('store:set', data),
   fetchUrl: (url) => ipcRenderer.invoke('net:fetch', url),
   openExternal: (url) => ipcRenderer.invoke('shell:open', url),
+  // Knowledge Base file storage
+  kbSaveFile: (args) => ipcRenderer.invoke('kb:saveFile', args),
+  kbReadFile: (args) => ipcRenderer.invoke('kb:readFile', args),
+  kbDeleteFile: (args) => ipcRenderer.invoke('kb:deleteFile', args),
+  kbDeleteFolder: (args) => ipcRenderer.invoke('kb:deleteFolder', args),
 });

@@ -3,7 +3,14 @@
 // Electron) it falls back to localStorage so the UI still works.
 
 const BROWSER_KEY = 'aws-learning-store';
-const EMPTY = { progress: {}, quizHistory: [], examHistory: [], notesCache: {}, settings: {} };
+const EMPTY = {
+  progress: {},
+  quizHistory: [],
+  examHistory: [],
+  kbFolders: [],
+  notesCache: {},
+  settings: {},
+};
 
 function hasBridge() {
   return typeof window !== 'undefined' && !!window.awsLearning;
@@ -66,4 +73,41 @@ export function openExternal(url) {
   } else {
     window.open(url, '_blank', 'noopener');
   }
+}
+
+// ---- Knowledge Base file bytes (disk via IPC) -------------------------------
+// In the packaged app, file bytes are written to the user-data directory. In a
+// plain browser (dev preview) there is no disk bridge, so byte save/read is a
+// no-op and the app relies on the extracted text kept in the store.
+
+export async function kbSaveFileBytes({ folderId, fileId, ext, arrayBuffer }) {
+  if (!hasBridge() || !window.awsLearning.kbSaveFile) return { ok: false, browser: true };
+  const base64 = arrayBufferToBase64(arrayBuffer);
+  return window.awsLearning.kbSaveFile({ folderId, fileId, ext, base64 });
+}
+
+export async function kbReadFileBytes({ folderId, fileId, ext }) {
+  if (!hasBridge() || !window.awsLearning.kbReadFile) return { ok: false, browser: true };
+  const res = await window.awsLearning.kbReadFile({ folderId, fileId, ext });
+  if (res.ok && res.base64) {
+    return { ok: true, blob: base64ToBlob(res.base64) };
+  }
+  return res;
+}
+
+function arrayBufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function base64ToBlob(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes]);
 }

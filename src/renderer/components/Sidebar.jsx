@@ -6,6 +6,7 @@ const NAV = [
   { id: 'quiz', label: 'Quizzes', icon: '📝' },
   { id: 'exam', label: 'Mock Exam', icon: '🎯' },
   { id: 'interview', label: 'Interview Q&A', icon: '💬' },
+  { id: 'knowledge', label: 'Knowledge Base', icon: '📁' },
   { id: 'progress', label: 'Progress', icon: '📊' },
 ];
 

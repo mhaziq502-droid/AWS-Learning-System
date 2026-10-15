@@ -6,6 +6,7 @@ import Notes from './views/Notes.jsx';
 import Quiz from './views/Quiz.jsx';
 import MockExam from './views/MockExam.jsx';
 import Interview from './views/Interview.jsx';
+import KnowledgeBase from './views/KnowledgeBase.jsx';
 import Progress from './views/Progress.jsx';
 
 export default function App() {
@@ -56,6 +57,7 @@ export default function App() {
           />
         )}
         {view === 'interview' && <Interview />}
+        {view === 'knowledge' && <KnowledgeBase app={app} />}
         {view === 'progress' && <Progress app={app} goToModule={goToModule} />}
       </main>
     </div>

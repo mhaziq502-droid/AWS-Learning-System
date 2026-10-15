@@ -12,6 +12,16 @@ export default defineConfig({
   build: {
     outDir: fileURLToPath(new URL('./dist', import.meta.url)),
     emptyOutDir: true,
+    // pdfjs-dist v4 uses top-level await; target engines that support it.
+    target: 'es2022',
+    chunkSizeWarningLimit: 2500,
+  },
+  worker: {
+    format: 'es',
+  },
+  optimizeDeps: {
+    // pdf.js and mammoth are large; let Vite pre-bundle them cleanly.
+    include: ['pdfjs-dist', 'mammoth'],
   },
   server: {
     port: 5173,
