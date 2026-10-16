@@ -43,10 +43,16 @@ function findInDir(dir, matcher) {
 
 let ok = true;
 
-// 1) worker script
-const workerMain = tryResolve('tesseract.js');
-const tessDist = workerMain ? path.dirname(workerMain) : null;
-ok = copyIfExists(findInDir(tessDist, (f) => f === 'worker.min.js'), 'worker.min.js') && ok;
+// 1) worker script. The package main may resolve to src/ or dist/, so locate
+// the package root via its package.json and look inside dist/.
+const tessPkgJson = tryResolve('tesseract.js/package.json');
+const tessRoot = tessPkgJson ? path.dirname(tessPkgJson) : null;
+const tessDist = tessRoot ? path.join(tessRoot, 'dist') : null;
+let workerSrc = findInDir(tessDist, (f) => f === 'worker.min.js');
+// Fallbacks: some versions name it differently or place it elsewhere.
+if (!workerSrc) workerSrc = findInDir(tessDist, (f) => /^worker.*\.js$/.test(f));
+if (!workerSrc && tessRoot) workerSrc = findInDir(path.join(tessRoot, 'src'), (f) => f === 'worker-script' );
+ok = copyIfExists(workerSrc, 'worker.min.js') && ok;
 
 // 2) core WASM (from tesseract.js-core)
 const coreMain = tryResolve('tesseract.js-core/package.json');
