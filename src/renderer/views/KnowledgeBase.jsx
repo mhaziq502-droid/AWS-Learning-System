@@ -1,7 +1,9 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { extractText, extOf } from '../lib/extract.js';
 import { summarizeFolder } from '../lib/summarize.js';
-import { kbSaveFileBytes } from '../lib/storage.js';
+import { kbSaveFileBytes, kbReadFileBytes, kbOpenFile } from '../lib/storage.js';
+import { ocrPdf, ocrAvailable } from '../lib/ocr.js';
+import { aiConfigured, aiSummarizeFolder } from '../lib/aiSummary.js';
 
 function fmtBytes(n) {
   if (n == null) return '';
@@ -135,6 +137,9 @@ function FolderDetail({ app, folderId, onBack }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(folder?.title || '');
   const [desc, setDesc] = useState(folder?.description || '');
+  const [preview, setPreview] = useState(null); // { name, text }
+  const [summaryMode, setSummaryMode] = useState('offline'); // offline | ai
+  const canAi = aiConfigured(app.store.settings);
 
   if (!folder) {
     return (
@@ -180,6 +185,7 @@ function FolderDetail({ app, folderId, onBack }) {
   const runSummary = () => {
     setBusy(true);
     setStatus('Summarizing all files in this folder…');
+    setSummaryMode('offline');
     // Defer so the UI can paint the busy state before the (sync) work.
     setTimeout(() => {
       const result = summarizeFolder(
@@ -189,6 +195,75 @@ function FolderDetail({ app, folderId, onBack }) {
       setBusy(false);
       setStatus('');
     }, 30);
+  };
+
+  const runAiSummary = async () => {
+    setBusy(true);
+    setSummaryMode('ai');
+    setStatus('Generating AI summary…');
+    const res = await aiSummarizeFolder(
+      (folder.files || []).map((f) => ({ name: f.name, text: f.text || '' })),
+      app.store.settings
+    );
+    if (res.ok) {
+      app.saveFolderSummary(folderId, { ai: true, markdown: res.text });
+      setStatus('');
+    } else {
+      setStatus(`AI summary failed: ${res.error}`);
+    }
+    setBusy(false);
+  };
+
+  const openInSystem = async (file) => {
+    const res = await kbOpenFile({ folderId, fileId: file.id, ext: file.ext ? '.' + file.ext : '' });
+    if (res && res.browser) {
+      setStatus('Opening files requires the desktop app.');
+    } else if (res && !res.ok) {
+      setStatus(`Could not open file: ${res.error || 'unknown error'}`);
+    }
+  };
+
+  const showPreview = (file) => {
+    if (file.text && file.text.trim()) {
+      setPreview({ name: file.name, text: file.text });
+    } else {
+      setStatus('No extracted text to preview for this file. Try "Open" or "Run OCR".');
+    }
+  };
+
+  const runOcr = async (file) => {
+    if (file.ext !== 'pdf') return;
+    setBusy(true);
+    setStatus(`Preparing OCR for ${file.name}…`);
+    try {
+      const available = await ocrAvailable();
+      if (!available) {
+        setStatus('OCR engine is not available in this build.');
+        setBusy(false);
+        return;
+      }
+      const read = await kbReadFileBytes({ folderId, fileId: file.id, ext: file.ext ? '.' + file.ext : '' });
+      if (!read.ok || !read.blob) {
+        setStatus('Could not read the stored file for OCR.');
+        setBusy(false);
+        return;
+      }
+      const buf = await read.blob.arrayBuffer();
+      const text = await ocrPdf(buf, {
+        onProgress: ({ page, total, phase }) =>
+          setStatus(`OCR ${file.name}: page ${page}/${total} (${phase})…`),
+      });
+      if (text && text.trim()) {
+        app.updateFileText(folderId, file.id, text, '');
+        setStatus(`OCR complete for ${file.name}. Text is now searchable & summarizable.`);
+      } else {
+        setStatus(`OCR found no text in ${file.name}.`);
+      }
+    } catch (err) {
+      setStatus(`OCR failed: ${String(err.message || err)}`);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const saveEdits = () => {
@@ -250,8 +325,13 @@ function FolderDetail({ app, folderId, onBack }) {
           ⬆ Upload files
         </button>
         <button className="btn btn-ghost" onClick={runSummary} disabled={busy || files.length === 0}>
-          ✨ Summarize folder
+          ✨ Summarize (offline)
         </button>
+        {canAi && (
+          <button className="btn btn-ghost" onClick={runAiSummary} disabled={busy || files.length === 0}>
+            🤖 AI summary
+          </button>
+        )}
         {status && <span className="kb-status">{status}</span>}
       </section>
 
@@ -274,19 +354,51 @@ function FolderDetail({ app, folderId, onBack }) {
                     {f.note ? ` · ${f.note}` : ''}
                   </span>
                 </div>
-                <button
-                  className="btn btn-danger-ghost sm"
-                  onClick={() => app.removeFileFromFolder(folderId, f.id)}
-                >
-                  Remove
-                </button>
+                <div className="kb-file-actions">
+                  <button className="btn btn-ghost sm" onClick={() => openInSystem(f)} disabled={busy}>
+                    Open
+                  </button>
+                  <button
+                    className="btn btn-ghost sm"
+                    onClick={() => showPreview(f)}
+                    disabled={!f.text || !f.text.trim()}
+                    title={f.text ? 'Preview extracted text' : 'No extracted text'}
+                  >
+                    Preview
+                  </button>
+                  {f.ext === 'pdf' && (!f.text || !f.text.trim()) && (
+                    <button className="btn btn-ghost sm" onClick={() => runOcr(f)} disabled={busy}>
+                      Run OCR
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-danger-ghost sm"
+                    onClick={() => app.removeFileFromFolder(folderId, f.id)}
+                  >
+                    Remove
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      {summary && (
+      {summary && summary.ai && (
+        <section>
+          <h3 className="section-title">
+            Folder summary <span className="live-badge">AI · generative</span>
+          </h3>
+          <div className="kb-summary">
+            <pre className="kb-ai-markdown">{summary.markdown}</pre>
+            <p className="kb-file-sub" style={{ marginTop: 10 }}>
+              Generated {new Date(summary.generatedAt).toLocaleString()} · your configured AI provider
+            </p>
+          </div>
+        </section>
+      )}
+
+      {summary && !summary.ai && (
         <section>
           <h3 className="section-title">
             Folder summary
@@ -332,6 +444,18 @@ function FolderDetail({ app, folderId, onBack }) {
             </div>
           )}
         </section>
+      )}
+
+      {preview && (
+        <div className="kb-modal-backdrop" onClick={() => setPreview(null)}>
+          <div className="kb-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="kb-modal-head">
+              <strong>{preview.name}</strong>
+              <button className="btn btn-ghost sm" onClick={() => setPreview(null)}>Close</button>
+            </div>
+            <pre className="kb-modal-body">{preview.text}</pre>
+          </div>
+        </div>
       )}
     </div>
   );

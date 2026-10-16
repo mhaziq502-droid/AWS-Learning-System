@@ -83,8 +83,23 @@ material:
   extractive technique — it surfaces the most important sentences — rather than
   a cloud language model.)
 
+Additional per-file actions:
+- **Open** — opens the stored file in your operating system's default app.
+- **Preview** — shows the extracted text inside the app (no external app needed).
+- **Run OCR** — for scanned/image-only PDFs with no selectable text, runs
+  **offline OCR** (Tesseract.js, bundled with its English data) to extract text
+  so the file becomes searchable and summarizable. OCR is on-demand and only
+  appears for PDFs that have no extractable text.
+
+**Optional AI summary (bring your own key).** In **Settings** you can add an
+OpenAI or Anthropic API key. A **🤖 AI summary** button then appears alongside
+the offline one and produces a richer, generative summary. This is the only
+feature that sends data over the internet, it is **off by default**, and your
+key is stored locally and sent only to the provider you choose. The offline
+summarizer remains the default and keeps everything on your machine.
+
 > Text extraction works on text-based PDFs and `.docx`; scanned/image-only PDFs
-> have no selectable text (OCR is not included). Files of any type are still
+> can be processed with the **Run OCR** button. Files of any type are still
 > stored and searchable by name.
 
 ### 📊 Progress Tracker

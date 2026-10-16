@@ -8,6 +8,7 @@ const NAV = [
   { id: 'interview', label: 'Interview Q&A', icon: '💬' },
   { id: 'knowledge', label: 'Knowledge Base', icon: '📁' },
   { id: 'progress', label: 'Progress', icon: '📊' },
+  { id: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 
 export default function Sidebar({ view, setView }) {

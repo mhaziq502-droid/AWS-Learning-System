@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "concurrently -k \"vite\" \"npm:electron:dev\"",
     "electron:dev": "wait-on tcp:5173 && cross-env NODE_ENV=development electron .",
-    "build:renderer": "vite build",
+    "prebuild:renderer": "node scripts/copy-ocr-assets.js",
+    "build:renderer": "node scripts/copy-ocr-assets.js && vite build",
     "build:electron": "node scripts/build-electron.js",
     "build": "npm run build:renderer && npm run build:electron",
     "dist": "npm run build && electron-builder",
@@ -21,7 +22,8 @@
     "mermaid": "^11.4.1",
     "pdfjs-dist": "^4.7.76",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "tesseract.js": "^6.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",

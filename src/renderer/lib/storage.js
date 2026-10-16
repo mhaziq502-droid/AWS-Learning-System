@@ -95,6 +95,11 @@ export async function kbReadFileBytes({ folderId, fileId, ext }) {
   return res;
 }
 
+export async function kbOpenFile({ folderId, fileId, ext }) {
+  if (!hasBridge() || !window.awsLearning.kbOpenFile) return { ok: false, browser: true };
+  return window.awsLearning.kbOpenFile({ folderId, fileId, ext });
+}
+
 function arrayBufferToBase64(buffer) {
   let binary = '';
   const bytes = new Uint8Array(buffer);

@@ -12,4 +12,7 @@ contextBridge.exposeInMainWorld('awsLearning', {
   kbReadFile: (args) => ipcRenderer.invoke('kb:readFile', args),
   kbDeleteFile: (args) => ipcRenderer.invoke('kb:deleteFile', args),
   kbDeleteFolder: (args) => ipcRenderer.invoke('kb:deleteFolder', args),
+  kbOpenFile: (args) => ipcRenderer.invoke('kb:openFile', args),
+  // Optional AI summary (bring-your-own-key)
+  llmComplete: (args) => ipcRenderer.invoke('llm:complete', args),
 });

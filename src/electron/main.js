@@ -58,6 +58,36 @@ function fetchUrl(url) {
   });
 }
 
+// Generic HTTPS POST (JSON) for the OPTIONAL bring-your-own-key AI summary.
+// Only used when the user explicitly configures an API key in Settings. The key
+// is sent only to the host the user chose. Returns the raw response body.
+function postJson(url, headers, bodyObj) {
+  return new Promise((resolve) => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'https:') {
+        resolve({ ok: false, status: 0, body: 'Only https endpoints are allowed.' });
+        return;
+      }
+      const request = net.request({ method: 'POST', url });
+      request.setHeader('Content-Type', 'application/json');
+      for (const [k, v] of Object.entries(headers || {})) request.setHeader(k, v);
+      let body = '';
+      request.on('response', (response) => {
+        response.on('data', (chunk) => (body += chunk.toString()));
+        response.on('end', () =>
+          resolve({ ok: response.statusCode < 400, status: response.statusCode, body })
+        );
+      });
+      request.on('error', (err) => resolve({ ok: false, status: 0, body: String(err) }));
+      request.write(JSON.stringify(bodyObj));
+      request.end();
+    } catch (err) {
+      resolve({ ok: false, status: 0, body: String(err) });
+    }
+  });
+}
+
 // -----------------------------------------------------------------------------
 // IPC handlers
 // -----------------------------------------------------------------------------
@@ -144,6 +174,64 @@ ipcMain.handle('kb:deleteFolder', (_event, { folderId }) => {
     const dir = folderDir(folderId);
     if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
     return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+});
+
+// Optional AI summary. The renderer passes the provider, key, model and prompt.
+// We translate to the provider's REST shape and return extracted text. Nothing
+// is called unless the user configured a key and clicked "AI summary".
+ipcMain.handle('llm:complete', async (_event, { provider, apiKey, model, prompt }) => {
+  if (!apiKey) return { ok: false, error: 'No API key configured.' };
+  try {
+    if (provider === 'anthropic') {
+      const res = await postJson(
+        'https://api.anthropic.com/v1/messages',
+        { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        {
+          model: model || 'claude-3-5-haiku-20241022',
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: prompt }],
+        }
+      );
+      if (!res.ok) return { ok: false, error: `HTTP ${res.status}: ${res.body?.slice(0, 300)}` };
+      const data = JSON.parse(res.body);
+      const text = (data.content || []).map((c) => c.text || '').join('\n').trim();
+      return { ok: true, text };
+    }
+    // Default: OpenAI-compatible Chat Completions (OpenAI, Groq, OpenRouter, etc.)
+    const baseUrl =
+      provider === 'openai'
+        ? 'https://api.openai.com/v1/chat/completions'
+        : (provider && provider.startsWith('https://') ? provider : 'https://api.openai.com/v1/chat/completions');
+    const res = await postJson(
+      baseUrl,
+      { Authorization: `Bearer ${apiKey}` },
+      {
+        model: model || 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.2,
+      }
+    );
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}: ${res.body?.slice(0, 300)}` };
+    const data = JSON.parse(res.body);
+    const text = data.choices?.[0]?.message?.content?.trim() || '';
+    return { ok: true, text };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+});
+
+ipcMain.handle('kb:openFile', async (_event, { folderId, fileId, ext }) => {
+  try {
+    const cleanExt = String(ext || '').replace(/[^a-zA-Z0-9.]/g, '');
+    const filePath = path.join(folderDir(folderId), safeSegment(fileId) + cleanExt);
+    if (!fs.existsSync(filePath)) return { ok: false, error: 'File not found' };
+    // Opens in the OS default application for that file type.
+    const result = await shell.openPath(filePath);
+    // openPath returns '' on success, or an error string.
+    return result ? { ok: false, error: result } : { ok: true };
   } catch (err) {
     return { ok: false, error: String(err) };
   }

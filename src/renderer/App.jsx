@@ -8,6 +8,7 @@ import MockExam from './views/MockExam.jsx';
 import Interview from './views/Interview.jsx';
 import KnowledgeBase from './views/KnowledgeBase.jsx';
 import Progress from './views/Progress.jsx';
+import Settings from './views/Settings.jsx';
 
 export default function App() {
   const app = useAppState();
@@ -59,6 +60,7 @@ export default function App() {
         {view === 'interview' && <Interview />}
         {view === 'knowledge' && <KnowledgeBase app={app} />}
         {view === 'progress' && <Progress app={app} goToModule={goToModule} />}
+        {view === 'settings' && <Settings app={app} />}
       </main>
     </div>
   );

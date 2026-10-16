@@ -179,6 +179,30 @@ export function useAppState() {
     });
   }, []);
 
+  const updateSettings = useCallback((patch) => {
+    setStore((prev) => {
+      const next = structuredClone(prev);
+      next.settings = { ...(next.settings || {}), ...patch };
+      return next;
+    });
+  }, []);
+
+  const updateFileText = useCallback((folderId, fileId, text, note) => {
+    setStore((prev) => {
+      const next = structuredClone(prev);
+      const f = (next.kbFolders || []).find((x) => x.id === folderId);
+      if (f) {
+        const file = (f.files || []).find((x) => x.id === fileId);
+        if (file) {
+          file.text = text;
+          if (note !== undefined) file.note = note;
+          f.summary = null; // new text invalidates summary
+        }
+      }
+      return next;
+    });
+  }, []);
+
   const saveFolderSummary = useCallback((folderId, summary) => {
     setStore((prev) => {
       const next = structuredClone(prev);
@@ -212,7 +236,10 @@ export function useAppState() {
     deleteFolder,
     addFileToFolder,
     removeFileFromFolder,
+    updateFileText,
     saveFolderSummary,
+    // settings
+    updateSettings,
   };
 }
 
